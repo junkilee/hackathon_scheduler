@@ -4,7 +4,7 @@ project(hackathon_scheduler)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation actionlib_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -19,10 +19,13 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation
 ## Declare ROS messages and services ##
 #######################################
 
+add_action_files(DIRECTORY action FILES count.action)
+
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
   Event.msg  
+  TaskStatus.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -30,12 +33,14 @@ add_service_files(
   FILES
   AddEvent.srv
   GetSchedule.srv
+  RemoveEvent.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
   std_msgs
+  actionlib_msgs
 )
 
 ###################################
