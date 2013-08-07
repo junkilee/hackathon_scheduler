@@ -74,7 +74,7 @@ bool addEvent(hackathon_scheduler::AddEvent::Request  &req,
           e.taskName.c_str(), e.startTime.c_str(), e.taskType.c_str(),
           (*it).taskName.c_str(), (*it).startTime.c_str(), (*it).taskType.c_str(),
           e.taskName.c_str());
-      return false;
+      return true;
     }
   }
 
@@ -144,6 +144,30 @@ bool testGetTime(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) 
   return true;
 }
 
+bool testPublishStatus(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
+  ROS_INFO("Preparing to publish some test statuses");
+  ros::NodeHandle n;
+  ros::Publisher taskStatusPublisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
+  ros::Rate rate(1);
+  hackathon_scheduler::TaskStatus status;
+  status.taskName="test";
+  status.status="executing";
+  status.startTime=getCurrentStringTime();
+  for (int i=0; i<3; i++) {
+    char buf[10];
+    sprintf(buf,"%i",i);
+    status.message=buf;
+    taskStatusPublisher.publish(status);
+    rate.sleep();
+  }
+  status.status="success";
+  status.message="finished";
+  taskStatusPublisher.publish(status);
+  ros::spinOnce();
+  rate.sleep();
+  return true;
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "hackathon_scheduler");
@@ -155,7 +179,8 @@ int main(int argc, char **argv)
   ros::ServiceServer testService = n.advertiseService("hackathon_scheduler/testAddEvent",testAddEvent);
   ros::ServiceServer testGetTimeService = n.advertiseService("hackathon_scheduler/testGetTime",testGetTime);
   ros::ServiceServer getScheduleService = n.advertiseService("hackathon_scheduler/getSchedule",getSchedule);
-  ros::Publisher publisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
+  ros::ServiceServer testPublishStatusService = n.advertiseService("hackathon_scheduler/testPublishStatus",testPublishStatus);
+//  ros::Publisher taskStatusPublisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
   ROS_INFO("Add any schedule you want.");
 
   ros::Rate loop_rate(1); // 1Hz

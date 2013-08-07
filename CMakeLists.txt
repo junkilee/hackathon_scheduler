@@ -55,7 +55,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES hackathon_scheduler
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs actionlib_msgs
 #  DEPENDS system_lib
 )
 
@@ -86,6 +86,12 @@ add_dependencies(hackathon_scheduler_node hackathon_scheduler_generate_messages_
 target_link_libraries(hackathon_scheduler_node
   ${catkin_LIBRARIES}
 )
+
+#add_executable(dummy_action_server src/dummy_action_server.cpp)
+#add_dependencies(dummy_action_server hackathon_scheduler_generate_messages_cpp)
+#target_link_libraries(dummy_action_server
+#  ${catkin_LIBRARIES}
+#)
 
 #############
 ## Install ##
