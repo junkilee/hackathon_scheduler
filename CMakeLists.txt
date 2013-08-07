@@ -22,13 +22,14 @@ find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  Schedule.msg  
+  Event.msg  
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  AddSchedule.srv
+  AddEvent.srv
+  GetSchedule.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
