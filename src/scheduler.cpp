@@ -7,22 +7,43 @@
 #include "std_srvs/Empty.h"
 
 #include <vector>
+#include <string.h>
+#include <time.h>
 
 std::vector<hackathon_scheduler::Event> schedule;
+
+long int secondsFromStringTime(std::string time) {
+  long int hours,minutes;
+  sscanf(time.c_str(),"%ld:%ld",&hours,&minutes);
+  return hours*3600+minutes*60;
+}
+
+std::string getCurrentStringTime() {
+  time_t rawtime;
+  struct tm * timeinfo;
+
+  time (&rawtime);
+  timeinfo = localtime (&rawtime);
+  char buf[5];
+  sprintf(buf,"%2d:%2d",timeinfo->tm_hour,timeinfo->tm_min);
+  return std::string(buf);
+}
 
 //struct for sorting events by start time
 struct event_earlier_than_key
 {
     inline bool operator() (const hackathon_scheduler::Event& struct1, const hackathon_scheduler::Event& struct2)
     {
-        return (struct1.startTime < struct2.startTime);
+        return (secondsFromStringTime(struct1.startTime) < secondsFromStringTime(struct2.startTime));
     }
 };
+
 
 //whether two events overlap
 bool overlaps(hackathon_scheduler::Event e1, hackathon_scheduler::Event e2) {
   return (e1.startTime==e2.startTime);//!(e1.endTime<=e2.startTime || e2.endTime<=e1.startTime);
 }
+
 
 //add an Event
 bool addEvent(hackathon_scheduler::AddEvent::Request  &req,
@@ -30,46 +51,31 @@ bool addEvent(hackathon_scheduler::AddEvent::Request  &req,
 {
   ROS_INFO("addEvent hit");
   hackathon_scheduler::Event e = req.event;
-  ROS_INFO("Attempting to add event %s of type %s with parameters %s to schedule at time %lf",e.taskName.c_str(),e.taskType.c_str(),e.parameters.c_str(),e.startTime.toSec());
+  ROS_INFO("Attempting to add event %s of type %s with parameters %s to schedule at time %s",e.taskName.c_str(),e.taskType.c_str(),e.parameters.c_str(),e.startTime.c_str());
   //determine if given schedule overlaps another schedule in the list
   for (std::vector<hackathon_scheduler::Event>::iterator it = schedule.begin();
        it != schedule.end(); ++it)
   {
     if (overlaps(e,*it)) {
       res.success=false;
-      ROS_INFO("Events %s at %lf of type %s and %s at %lf of type %s overlap! Not adding event %s", 
-          e.taskName.c_str(), e.startTime.toSec(), e.taskType.c_str(),
-          (*it).taskName.c_str(), (*it).startTime.toSec(), (*it).taskType.c_str(),
+      ROS_INFO("Events %s at %s of type %s and %s at %s of type %s overlap! Not adding event %s", 
+          e.taskName.c_str(), e.startTime.c_str(), e.taskType.c_str(),
+          (*it).taskName.c_str(), (*it).startTime.c_str(), (*it).taskType.c_str(),
           e.taskName.c_str());
       return false;
     }
   }
 
   schedule.push_back(e);
-  ROS_INFO("Added event %s of type %s with parameters %s to schedule at time %lf",e.taskName.c_str(),e.taskType.c_str(),e.parameters.c_str(),e.startTime.toSec());
+  ROS_INFO("Added event %s of type %s with parameters %s to schedule at time %s",e.taskName.c_str(),e.taskType.c_str(),e.parameters.c_str(),e.startTime.c_str());
   sort(schedule.begin(), schedule.end(), event_earlier_than_key());
   ROS_INFO("Full schedule is now:");
   for (std::vector<hackathon_scheduler::Event>::iterator it = schedule.begin();
        it != schedule.end(); ++it)
   {
-    ROS_INFO("    event %s of type %s with parameters {%s} at time %lf",(*it).taskName.c_str(),(*it).taskType.c_str(),(*it).parameters.c_str(),(*it).startTime.toSec());
+    ROS_INFO("    event %s of type %s with parameters {%s} at time %s",(*it).taskName.c_str(),(*it).taskType.c_str(),(*it).parameters.c_str(),(*it).startTime.c_str());
   } 
   res.success=true;
-  return true;
-}
-
-bool testAddEvent(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
-  ROS_INFO("Testing the addEvent service");
-  hackathon_scheduler::Event e;
-  e.taskName="test";
-  e.startTime=ros::Time::now()+ros::Duration(20);
-  e.taskType="task1";
-  e.parameters="";
-  hackathon_scheduler::AddEvent::Request r;
-  r.event=e;
-  hackathon_scheduler::AddEvent::Response o;
-  ROS_INFO("Attempting to call service");
-  if (!addEvent(r,o)) ROS_INFO("Problem");
   return true;
 }
 
@@ -87,6 +93,31 @@ bool getSchedule(hackathon_scheduler::GetSchedule::Request  &req,
   return true;
 }
 
+
+//test for adding events, adds a task1 called test with blank parameters at the current time+20 seconds
+bool testAddEvent(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
+  ROS_INFO("Testing the addEvent service");
+  hackathon_scheduler::Event e;
+  e.taskName="test";
+  e.startTime=getCurrentStringTime();//ros::Time::now()+ros::Duration(20);
+  e.taskType="task1";
+  e.parameters="";
+  hackathon_scheduler::AddEvent::Request r;
+  r.event=e;
+  hackathon_scheduler::AddEvent::Response o;
+  ROS_INFO("Attempting to call service");
+  if (!addEvent(r,o)) ROS_INFO("Problem");
+  return true;
+}
+
+//test get the current time
+bool testGetTime(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
+  ROS_INFO("Getting the current local time");
+  std::string t = getCurrentStringTime();
+  ROS_INFO("current time: %s, seconds since midnight: %ld",t.c_str(),secondsFromStringTime(t));
+  return true;
+}
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "hackathon_scheduler");
@@ -94,6 +125,7 @@ int main(int argc, char **argv)
 
   ros::ServiceServer service = n.advertiseService("hackathon_scheduler/addEvent", addEvent);
   ros::ServiceServer testService = n.advertiseService("hackathon_scheduler/testAddEvent",testAddEvent);
+  ros::ServiceServer testGetTimeService = n.advertiseService("hackathon_scheduler/testGetTime",testGetTime);
   ros::ServiceServer getScheduleService = n.advertiseService("hackathon_scheduler/getSchedule",getSchedule);
   ros::Publisher publisher = n.advertise<std_msgs::String>("hackathon_scheduler/status", 100);
   ROS_INFO("Add any schedule you want.");
