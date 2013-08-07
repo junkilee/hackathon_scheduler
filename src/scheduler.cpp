@@ -13,6 +13,7 @@
 #include <time.h>
 
 std::vector<hackathon_scheduler::Event> schedule;
+ros::Publisher* taskStatusPublisher;
 
 //get the number of seconds since midnight from an hh:mm time string
 long int secondsFromStringTime(std::string time) {
@@ -147,7 +148,6 @@ bool testGetTime(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) 
 bool testPublishStatus(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res) {
   ROS_INFO("Preparing to publish some test statuses");
   ros::NodeHandle n;
-  ros::Publisher taskStatusPublisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
   ros::Rate rate(1);
   hackathon_scheduler::TaskStatus status;
   status.taskName="test";
@@ -157,12 +157,12 @@ bool testPublishStatus(std_srvs::Empty::Request &req, std_srvs::Empty::Response 
     char buf[10];
     sprintf(buf,"%i",i);
     status.message=buf;
-    taskStatusPublisher.publish(status);
+    taskStatusPublisher->publish(status);
     rate.sleep();
   }
   status.status="success";
   status.message="finished";
-  taskStatusPublisher.publish(status);
+  taskStatusPublisher->publish(status);
   ros::spinOnce();
   rate.sleep();
   return true;
@@ -180,6 +180,8 @@ int main(int argc, char **argv)
   ros::ServiceServer testGetTimeService = n.advertiseService("hackathon_scheduler/testGetTime",testGetTime);
   ros::ServiceServer getScheduleService = n.advertiseService("hackathon_scheduler/getSchedule",getSchedule);
   ros::ServiceServer testPublishStatusService = n.advertiseService("hackathon_scheduler/testPublishStatus",testPublishStatus);
+  ros::Publisher p = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
+  taskStatusPublisher = &p;
 //  ros::Publisher taskStatusPublisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
   ROS_INFO("Add any schedule you want.");
 
