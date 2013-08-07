@@ -8,6 +8,11 @@
 #include "std_msgs/Empty.h"
 #include "std_srvs/Empty.h"
 
+#include <actionlib/client/simple_action_client.h>
+#include <hackathon_scheduler/countAction.h>
+#include <hackathon_scheduler/countResult.h>
+#include <hackathon_scheduler/countFeedback.h>
+
 #include <vector>
 #include <string.h>
 #include <time.h>
@@ -152,7 +157,6 @@ bool testPublishStatus(std_srvs::Empty::Request &req, std_srvs::Empty::Response 
   hackathon_scheduler::TaskStatus status;
   status.taskName="test";
   status.status="executing";
-  status.startTime=getCurrentStringTime();
   for (int i=0; i<3; i++) {
     char buf[10];
     sprintf(buf,"%i",i);
@@ -168,6 +172,69 @@ bool testPublishStatus(std_srvs::Empty::Request &req, std_srvs::Empty::Response 
   return true;
 }
 
+/////////Dummy Action callbacks
+// Called once when the goal completes
+void dummyActionDoneCb(const actionlib::SimpleClientGoalState& state,
+            const hackathon_scheduler::countResultConstPtr& result)
+{
+  ROS_INFO("Dummy Action Finished");
+
+  hackathon_scheduler::TaskStatus status;
+  status.taskName="dummytask";
+
+  if (state==actionlib::SimpleClientGoalState::SUCCEEDED) {
+    status.message=status.status="success";
+    taskStatusPublisher->publish(status);
+  }
+  else {
+    status.message=status.status="failure";
+    taskStatusPublisher->publish(status);
+  }
+}
+
+// Called once when the goal becomes active
+void dummyActionActiveCb()
+{
+  ROS_INFO("Dummy action just went active");
+  hackathon_scheduler::TaskStatus status;
+  status.taskName="dummytask";
+  status.status="executing";
+  status.message="staring dummy task";
+  taskStatusPublisher->publish(status);
+}
+
+// Called every time feedback is received for the goal
+void dummyActionFeedbackCb(const hackathon_scheduler::countFeedbackConstPtr& feedback)
+{
+  ROS_INFO("Got dummy action feedback: %d",feedback->current);
+  hackathon_scheduler::TaskStatus status;
+  status.taskName="dummytask";
+  status.status="executing";
+  char buf[40];
+  sprintf(buf,"dummy task count = %d",feedback->current);
+  status.message=buf;
+  taskStatusPublisher->publish(status);
+}
+
+void dummy_action(int count) {
+  actionlib::SimpleActionClient<hackathon_scheduler::countAction> client("hackathon_scheduler/count", true); // true -> don't need ros::spin()
+  client.waitForServer();
+  hackathon_scheduler::countGoal goal;
+  goal.count=count;
+  client.sendGoal(goal, &dummyActionDoneCb,&dummyActionActiveCb,&dummyActionFeedbackCb);
+  client.waitForResult();
+}
+
+bool testDummyAction(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+  ROS_INFO("Beginning dummy action test");
+  dummy_action(5);
+  return true;
+}
+///////////////////
+
+
+
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "hackathon_scheduler");
@@ -180,6 +247,7 @@ int main(int argc, char **argv)
   ros::ServiceServer testGetTimeService = n.advertiseService("hackathon_scheduler/testGetTime",testGetTime);
   ros::ServiceServer getScheduleService = n.advertiseService("hackathon_scheduler/getSchedule",getSchedule);
   ros::ServiceServer testPublishStatusService = n.advertiseService("hackathon_scheduler/testPublishStatus",testPublishStatus);
+  ros::ServiceServer testActionService = n.advertiseService("hackathon_scheduler/testActionService",testDummyAction);
   ros::Publisher p = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);
   taskStatusPublisher = &p;
 //  ros::Publisher taskStatusPublisher = n.advertise<hackathon_scheduler::TaskStatus>("hackathon_scheduler/status", 100);

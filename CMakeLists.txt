@@ -4,7 +4,7 @@ project(hackathon_scheduler)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation actionlib_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation actionlib_msgs actionlib)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -55,7 +55,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES hackathon_scheduler
-  CATKIN_DEPENDS roscpp rospy std_msgs actionlib_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs actionlib_msgs actionlib
 #  DEPENDS system_lib
 )
 
@@ -87,11 +87,10 @@ target_link_libraries(hackathon_scheduler_node
   ${catkin_LIBRARIES}
 )
 
-#add_executable(dummy_action_server src/dummy_action_server.cpp)
-#add_dependencies(dummy_action_server hackathon_scheduler_generate_messages_cpp)
-#target_link_libraries(dummy_action_server
-#  ${catkin_LIBRARIES}
-#)
+add_executable(dummy_action_server src/dummy_action_server.cpp)
+target_link_libraries(dummy_action_server
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
